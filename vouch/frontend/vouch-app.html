@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vouch</title>
+<style>
+  :root{
+    --paper:#F6F4EF; --ink:#1E2A24; --ink-soft:#4B564F; --line:#D9D4C6;
+    --verified:#2F6E4E; --verified-bg:#E6EFE6;
+    --flagged:#A03B2C; --flagged-bg:#F5E6E0;
+    --unknown:#8A7A3E; --unknown-bg:#F1EBD8;
+    --card:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Iowan Old Style','Georgia',serif;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono','SFMono-Regular',Menlo,monospace;}
+
+  .api-bar{background:#EDEAE1;border-bottom:1px solid var(--line);padding:8px 20px;display:flex;justify-content:center;align-items:center;gap:8px;}
+  .api-bar span{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);}
+  .api-bar input{font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid var(--line);border-radius:4px;padding:4px 8px;width:220px;background:#fff;}
+  .api-bar .dot{width:7px;height:7px;border-radius:50%;background:#999;}
+  .api-bar .dot.up{background:var(--verified);}
+  .api-bar .dot.down{background:var(--flagged);}
+  .api-bar button.mini{font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:none;border:1px solid var(--line);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--ink-soft);}
+
+  .top-switcher{display:flex;justify-content:center;gap:0;padding:22px 16px 0;}
+  .top-switcher button{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.02em;background:none;border:1px solid var(--ink);color:var(--ink);padding:11px 30px;cursor:pointer;}
+  .top-switcher button:first-child{border-radius:4px 0 0 4px;border-right:none;}
+  .top-switcher button:last-child{border-radius:0 4px 4px 0;}
+  .top-switcher button.active{background:var(--ink);color:var(--paper);}
+
+  .sub-switcher{display:flex;justify-content:center;gap:0;padding:16px 16px 0;}
+  .sub-switcher button{font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:none;border:1px solid var(--line);color:var(--ink-soft);padding:8px 16px;cursor:pointer;}
+  .sub-switcher button:first-child{border-radius:4px 0 0 4px;border-right:none;}
+  .sub-switcher button:last-child{border-radius:0 4px 4px 0;}
+  .sub-switcher button.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  .top-view{display:none;}
+  .top-view.active{display:block;}
+  .sub-view{display:none;}
+  .sub-view.active{display:block;}
+
+  .wrap{max-width:740px;margin:0 auto;padding:26px 20px 90px;}
+  .header{margin-bottom:26px;}
+  .wordmark{font-size:14px;letter-spacing:.03em;color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;margin:0 0 6px;}
+  .header h1{font-size:27px;line-height:1.2;margin:0 0 8px;font-weight:600;}
+  .header p{color:var(--ink-soft);font-size:14px;line-height:1.5;margin:0;max-width:52ch;}
+
+  .intake, .step{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:18px;}
+  .mode-row{display:flex;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
+  .mode-row label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);display:flex;align-items:center;gap:5px;cursor:pointer;}
+
+  .step-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .step-num{width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;flex-shrink:0;}
+  .step-title{font-size:15.5px;font-weight:600;margin:0;}
+  .step-desc{font-size:12.5px;color:var(--ink-soft);margin:0 0 14px 32px;line-height:1.5;}
+
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);margin-bottom:5px;}
+  .row{display:flex;gap:10px;}
+  .row .field{flex:1;}
+  input[type=text], input[type=email], textarea{
+    width:100%;font-family:'Iowan Old Style',Georgia,serif;font-size:13.5px;color:var(--ink);
+    border:1px solid var(--line);border-radius:4px;padding:9px;background:#FDFCF9;
+  }
+  textarea.raw{font-family:'IBM Plex Mono',monospace;font-size:12.5px;min-height:110px;resize:vertical;}
+  input[type=file]{font-family:'IBM Plex Mono',monospace;font-size:12px;}
+
+  .btn{background:var(--ink);color:var(--paper);border:none;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:10px 20px;border-radius:4px;cursor:pointer;}
+  .btn:disabled{opacity:.5;}
+  .btn.secondary{background:none;border:1px solid var(--line);color:var(--ink-soft);}
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:10px;font-style:italic;}
+
+  .out{margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:#FAF8F3;border:1px solid var(--line);border-radius:5px;padding:11px 13px;white-space:pre-wrap;word-break:break-word;display:none;}
+  .out.show{display:block;}
+  .out.ok{border-color:#BFDBC6;}
+  .out.err{border-color:#E3C6BC;color:var(--flagged);}
+
+  .error-box{background:var(--flagged-bg);border:1px solid #E3C6BC;color:var(--flagged);border-radius:6px;padding:12px 14px;font-size:13px;margin-bottom:20px;font-family:'IBM Plex Mono',monospace;}
+
+  .verdict-panel{display:flex;align-items:center;gap:20px;padding:22px;border-radius:8px;margin-bottom:18px;background:var(--card);border:1px solid var(--line);}
+  .dial{position:relative;width:80px;height:80px;flex-shrink:0;}
+  .dial svg{transform:rotate(-90deg);}
+  .dial-track{fill:none;stroke:#EDEAE1;stroke-width:8;}
+  .dial-fill{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dasharray .5s ease;}
+  .verdict-text .label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-soft);margin:0 0 5px;}
+  .verdict-text .headline{font-size:18px;font-weight:600;margin:0 0 4px;text-transform:capitalize;}
+  .verdict-text .sub{font-size:12.5px;color:var(--ink-soft);margin:0;}
+
+  .reasons{display:flex;flex-direction:column;gap:9px;margin-bottom:18px;}
+  .reason{display:flex;align-items:flex-start;gap:12px;padding:12px 15px;background:var(--card);border:1px solid var(--line);border-radius:6px;}
+  .reason .mark{width:20px;height:20px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;}
+  .reason p{margin:0;font-size:13.5px;line-height:1.5;}
+
+  .signals-panel{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:15px 18px;margin-bottom:16px;}
+  .signals-panel .sec-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-soft);margin:0 0 10px;}
+  .signal-row{display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #F0EDE4;font-size:12.5px;}
+  .signal-row:first-of-type{border-top:none;}
+  .signal-row .k{color:var(--ink-soft);font-family:'IBM Plex Mono',monospace;font-size:11px;}
+  .signal-row .v{font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+  .signal-row .v.pass{color:var(--verified);}
+  .signal-row .v.fail{color:var(--flagged);}
+
+  .flag-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;margin:0 6px 6px 0;}
+  .flag-pill.high{background:var(--flagged-bg);color:var(--flagged);}
+  .flag-pill.medium{background:var(--unknown-bg);color:var(--unknown);}
+  .flag-pill.low{background:#EDEAE1;color:var(--ink-soft);}
+
+  .company-badge{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:var(--verified-bg);color:var(--verified);padding:5px 12px;border-radius:20px;margin-bottom:16px;}
+  .company-badge.none{background:var(--unknown-bg);color:var(--unknown);}
+
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid #F0EDE4;font-family:'IBM Plex Mono',monospace;font-size:11.5px;}
+  th{color:var(--ink-soft);font-weight:400;}
+  tr.clickable{cursor:pointer;}
+  tr.clickable:hover{background:#FAF8F3;}
+
+  .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--paper);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:-2px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="api-bar">
+  <div class="dot" id="statusDot"></div>
+  <span>API</span>
+  <input type="text" id="apiBase" value="http://localhost:8000">
+  <button class="mini" onclick="checkHealth()">recheck</button>
+</div>
+
+<div class="top-switcher">
+  <button class="active" onclick="showTop('user')">User</button>
+  <button onclick="showTop('company')">Company</button>
+</div>
+
+<!-- =================================================================== -->
+<!-- USER TOP TAB -->
+<!-- =================================================================== -->
+<div class="top-view active" id="top-user">
+  <div class="sub-switcher">
+    <button class="active" onclick="showSub('user','email')">Email / Domain</button>
+    <button onclick="showSub('user','pdf')">Offer PDF</button>
+    <button onclick="showSub('user','text')">Assessment text</button>
+    <button onclick="showSub('user','offerid')">Offer ID (QR)</button>
+    <button onclick="showSub('user','anytext')">Any text</button>
+  </div>
+  <div class="wrap">
+    <div class="header">
+      <p class="wordmark">VOUCH — CANDIDATE CHECK</p>
+      <h1>Check who's really on the other end.</h1>
+      <p>Paste a recruiter's email or domain, upload the offer PDF you received, paste an assessment brief, or enter an offer ID from a QR code. Comes back verified, flagged as a likely scam, or unverifiable.</p>
+    </div>
+
+    <!-- EMAIL -->
+    <div class="sub-view active" id="sub-user-email">
+      <div class="intake">
+        <div class="mode-row">
+          <label><input type="radio" name="emailMode" value="sender" checked onclick="setEmailMode('sender')"> Just the sender's address</label>
+          <label><input type="radio" name="emailMode" value="raw" onclick="setEmailMode('raw')"> Full raw email (with headers)</label>
+        </div>
+        <div class="field" id="senderField">
+          <label>SENDER ADDRESS</label>
+          <input type="email" id="senderInput" placeholder="recruiter@company.com" value="priya.shah@northwind.xyz">
+        </div>
+        <div class="field" id="rawField" style="display:none;">
+          <label>RAW EMAIL SOURCE ("Show original" / "View source")</label>
+          <textarea class="raw" id="rawInput" placeholder="From: ...&#10;Authentication-Results: ...&#10;&#10;message body"></textarea>
+        </div>
+        <button class="btn" id="emailBtn" onclick="runEmailCheck()">Run check</button>
+        <div class="hint">A sender address alone gets domain + free-provider + recruiter-registry checks. Paste full raw source for SPF/DKIM/DMARC and scam-text scanning too.</div>
+      </div>
+      <div id="emailResult"></div>
+    </div>
+
+    <!-- PDF -->
+    <div class="sub-view" id="sub-user-pdf">
+      <div class="intake">
+        <div class="field">
+          <label>OFFER LETTER PDF</label>
+          <input type="file" id="pdfInput" accept="application/pdf">
+        </div>
+        <button class="btn" id="pdfBtn" onclick="runPdfCheck()">Run check</button>
+        <div class="hint">Checks the file's hash and signature against what the company actually issued.</div>
+      </div>
+      <div id="pdfResult"></div>
+    </div>
+
+    <!-- TEXT -->
+    <div class="sub-view" id="sub-user-text">
+      <div class="intake">
+        <div class="field">
+          <label>ASSESSMENT OR MESSAGE TEXT</label>
+          <textarea class="raw" id="textInput">Congratulations! To begin onboarding, please pay a $150 equipment fee via gift cards within 24 hours. We'll also need your SSN and bank account to set up payroll.</textarea>
+        </div>
+        <button class="btn" id="textBtn" onclick="runTextCheck()">Run check</button>
+        <div class="hint">Scans for known scam patterns: payment requests, gift cards, urgency language, requests for sensitive info, off-platform chat pushes.</div>
+      </div>
+      <div id="textResult"></div>
+    </div>
+
+    <!-- OFFER ID -->
+    <div class="sub-view" id="sub-user-offerid">
+      <div class="intake">
+        <div class="field">
+          <label>OFFER ID (from a QR code, e.g. VCH-ABC123)</label>
+          <input type="text" id="offerIdInput" placeholder="VCH-ABC123">
+        </div>
+        <button class="btn" id="offerIdBtn" onclick="runOfferIdCheck()">Run check</button>
+        <div class="hint">Same as scanning the QR code on a stamped offer letter, no file upload needed. Upload the actual PDF instead for a full tamper check.</div>
+      </div>
+      <div id="offerIdResult"></div>
+    </div>
+
+    <!-- ANY TEXT -->
+    <div class="sub-view" id="sub-user-anytext">
+      <div class="intake">
+        <div class="field">
+          <label>PASTE ANYTHING (LinkedIn message, DM, text message, email body, whatever you've got)</label>
+          <textarea class="raw" id="anyTextInput" placeholder="Paste any message you want scanned for scam patterns, LinkedIn outreach, a DM, a text, anything."></textarea>
+        </div>
+        <button class="btn" id="anyTextBtn" onclick="runAnyTextCheck()">Run check</button>
+        <div class="hint">Same scam-pattern scan as the Assessment tab, just without assuming it's a formal assessment. Good for testing random messages on the spot.</div>
+      </div>
+      <div id="anyTextResult"></div>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- COMPANY TOP TAB -->
+<!-- =================================================================== -->
+<div class="top-view" id="top-company">
+  <div class="sub-switcher">
+    <button class="active" onclick="showSub('company','setup')">Add company</button>
+    <button onclick="showSub('company','list')">All companies</button>
+  </div>
+  <div class="wrap">
+    <div class="header">
+      <p class="wordmark">VOUCH — COMPANY DASHBOARD</p>
+      <h1>Set up a company so the User tab has something to check against.</h1>
+      <p>Run these in order. Each step needs the company ID from step 1, it fills in automatically once created.</p>
+    </div>
+
+    <!-- SETUP -->
+    <div class="sub-view active" id="sub-company-setup">
+      <div id="companyBadge"></div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">1</div><p class="step-title">Create a company</p></div>
+        <p class="step-desc">Registers the company and domain. Returns a DNS TXT record you'd normally set to prove domain ownership.</p>
+        <div class="row">
+          <div class="field"><label>COMPANY NAME</label><input type="text" id="companyName" value="Northwind Robotics"></div>
+          <div class="field"><label>DOMAIN</label><input type="text" id="companyDomain" value="northwind.xyz"></div>
+        </div>
+        <button class="btn" id="btnCreateCompany" onclick="createCompany()">Create company</button>
+        <div class="out" id="outCreateCompany"></div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">2</div><p class="step-title">Verify the domain</p></div>
+        <p class="step-desc">Real path checks the DNS TXT record. Dev force-verify skips that for a demo, it's marked demo-only in your backend, skip it once you have a real domain.</p>
+        <button class="btn" onclick="devForceVerify()">Dev force-verify (demo)</button>
+        <button class="btn secondary" onclick="realVerify()">Verify via real DNS TXT record</button>
+        <div class="out" id="outVerify"></div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">3</div><p class="step-title">Add a recruiter</p></div>
+        <p class="step-desc">Only recruiters added here show as "registered" when a candidate checks an email from this domain, so this is what makes the User tab's email check come back verified.</p>
+        <div class="row">
+          <div class="field"><label>NAME</label><input type="text" id="recName" value="Priya Shah"></div>
+          <div class="field"><label>EMAIL</label><input type="text" id="recEmail" value="priya.shah@northwind.xyz"></div>
+        </div>
+        <div class="field"><label>LINKEDIN (optional)</label><input type="text" id="recLinkedin" value=""></div>
+        <button class="btn" onclick="addRecruiter()">Add recruiter</button>
+        <div class="out" id="outAddRecruiter"></div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">4</div><p class="step-title">Issue a signed offer</p></div>
+        <p class="step-desc">Uploads a PDF, stamps it with a QR code + verification footer, signs it, and stores the record. Download the result and use it in the User tab's PDF check.</p>
+        <div class="row">
+          <div class="field"><label>CANDIDATE EMAIL</label><input type="text" id="offerCandidate" value="alex.rivera@gmail.com"></div>
+          <div class="field"><label>ROLE</label><input type="text" id="offerRole" value="Software Engineer, Backend"></div>
+        </div>
+        <div class="field"><label>OFFER LETTER PDF</label><input type="file" id="offerPdf" accept="application/pdf"></div>
+        <button class="btn" onclick="issueOffer()">Stamp & issue offer</button>
+        <div class="out" id="outIssueOffer"></div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><div class="step-num">5</div><p class="step-title">Scan for lookalike domains</p></div>
+        <p class="step-desc">Generates typosquat variants of the company domain and checks which ones actually resolve.</p>
+        <button class="btn" onclick="runScan()" id="btnScan">Run lookalike scan</button>
+        <div class="out" id="outScan"></div>
+      </div>
+    </div>
+
+    <!-- LIST ALL COMPANIES -->
+    <div class="sub-view" id="sub-company-list">
+      <div class="step">
+        <div class="step-head"><div class="step-num">＝</div><p class="step-title">All companies</p></div>
+        <p class="step-desc">Pulled from <span class="mono">GET /api/company</span>. Click a row to load it as the active company above (fills in its ID for steps 2-5).</p>
+        <button class="btn secondary" onclick="loadCompanyList()">Refresh list</button>
+        <div id="companyListOut"></div>
+      </div>
+
+      <div class="step" id="activeCompanyReview" style="display:none;">
+        <div class="step-head"><div class="step-num">i</div><p class="step-title">Active company detail</p></div>
+        <div id="reviewOut"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let companyId = null;
+
+const VERDICT_META = {
+  verified:     {color:"var(--verified)", bg:"var(--verified-bg)", dial:88, mark:"✓"},
+  unverifiable: {color:"var(--unknown)",  bg:"var(--unknown-bg)",  dial:50, mark:"?"},
+  scam:         {color:"var(--flagged)",  bg:"var(--flagged-bg)",  dial:12, mark:"✕"}
+};
+
+function apiBase(){ return document.getElementById('apiBase').value.replace(/\/$/, ''); }
+
+async function checkHealth(){
+  const dot = document.getElementById('statusDot');
+  dot.className = 'dot';
+  try{
+    const res = await fetch(apiBase() + '/docs');
+    dot.className = 'dot ' + (res.ok ? 'up' : 'down');
+  }catch(e){ dot.className = 'dot down'; }
+}
+
+function showTop(name){
+  document.getElementById('top-user').classList.toggle('active', name==='user');
+  document.getElementById('top-company').classList.toggle('active', name==='company');
+  document.querySelectorAll('.top-switcher button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function showSub(group, name){
+  document.querySelectorAll(`[id^="sub-${group}-"]`).forEach(el=>{
+    el.classList.toggle('active', el.id === `sub-${group}-${name}`);
+  });
+  event.target.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function setEmailMode(mode){
+  document.getElementById('senderField').style.display = mode==='sender' ? 'block' : 'none';
+  document.getElementById('rawField').style.display = mode==='raw' ? 'block' : 'none';
+}
+
+function circumference(){ return 2*Math.PI*32; }
+function dialSvg(pct, color){
+  const c = circumference();
+  const fillLen = (pct/100)*c;
+  return `<div class="dial"><svg width="80" height="80" viewBox="0 0 80 80">
+    <circle class="dial-track" cx="40" cy="40" r="32"/>
+    <circle class="dial-fill" cx="40" cy="40" r="32" stroke="${color}"
+      stroke-dasharray="${fillLen.toFixed(1)} ${c.toFixed(1)}"/>
+  </svg></div>`;
+}
+function renderVerdict(result, extraSub){
+  const meta = VERDICT_META[result.verdict] || VERDICT_META.unverifiable;
+  const label = result.verdict === 'scam' ? 'Likely scam' : result.verdict === 'verified' ? 'Verified' : 'Unverifiable';
+  return `<div class="verdict-panel">${dialSvg(meta.dial, meta.color)}
+    <div class="verdict-text"><p class="label">VERDICT</p>
+      <p class="headline" style="color:${meta.color};">${label}</p>
+      <p class="sub">${extraSub || ''}</p></div></div>`;
+}
+function renderReasons(reasons, verdict){
+  const meta = VERDICT_META[verdict] || VERDICT_META.unverifiable;
+  if(!reasons || reasons.length===0) return '';
+  return `<div class="reasons">${reasons.map(r=>`<div class="reason">
+    <div class="mark" style="background:${meta.bg};color:${meta.color};">${meta.mark}</div><p>${r}</p></div>`).join('')}</div>`;
+}
+function signalRow(label, value, kind){
+  return `<div class="signal-row"><span class="k">${label}</span><span class="v ${kind||''}">${value}</span></div>`;
+}
+function setLoading(btnId, on, label){
+  const btn = document.getElementById(btnId);
+  btn.disabled = on;
+  btn.innerHTML = on ? '<span class="spinner"></span>checking' : (label || 'Run check');
+}
+function errorBox(msg){
+  return `<div class="error-box">Request failed: ${msg}. Check the API address above and confirm the backend is running.</div>`;
+}
+function showOut(id, data, isErr){
+  const el = document.getElementById(id);
+  el.className = 'out show ' + (isErr ? 'err' : 'ok');
+  el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+}
+
+/* ---------------- USER TAB ---------------- */
+
+async function runEmailCheck(){
+  const mode = document.querySelector('input[name=emailMode]:checked').value;
+  const body = mode === 'raw'
+    ? {raw_email: document.getElementById('rawInput').value}
+    : {sender_address: document.getElementById('senderInput').value};
+  setLoading('emailBtn', true);
+  const out = document.getElementById('emailResult');
+  out.innerHTML = '';
+  try{
+    const res = await fetch(apiBase()+'/api/verify/email', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+    const data = await res.json();
+    if(!res.ok){ out.innerHTML = errorBox(data.detail || res.status); return; }
+    const s = data.signals || {};
+    let html = renderVerdict(data, s.domain_status ? `Domain status: ${s.domain_status}` : '');
+    html += renderReasons(data.reasons, data.verdict);
+    html += `<div class="signals-panel"><p class="sec-label">RAW SIGNALS</p>
+      ${signalRow('from domain', data.from_domain || '—')}
+      ${signalRow('domain status', s.domain_status || 'unknown', s.domain_status==='official'?'pass':(s.domain_status||'').startsWith('lookalike')?'fail':'')}
+      ${signalRow('imitates', s.domain_imitates || '—')}
+      ${signalRow('domain age (days)', s.domain_age_days ?? 'unknown', (s.domain_age_days!=null && s.domain_age_days<30)?'fail':'')}
+      ${signalRow('SPF', s.spf || 'none', s.spf==='pass'?'pass':(s.spf==='fail'?'fail':''))}
+      ${signalRow('DKIM', s.dkim || 'none', s.dkim==='pass'?'pass':(s.dkim==='fail'?'fail':''))}
+      ${signalRow('DMARC', s.dmarc || 'none', s.dmarc==='pass'?'pass':(s.dmarc==='fail'?'fail':''))}
+      ${signalRow('free email provider', s.is_free_email?'yes':'no', s.is_free_email?'fail':'pass')}
+    </div>`;
+    out.innerHTML = html;
+  }catch(e){ out.innerHTML = errorBox(e.message); }
+  finally{ setLoading('emailBtn', false); }
+}
+
+async function runPdfCheck(){
+  const fileInput = document.getElementById('pdfInput');
+  const out = document.getElementById('pdfResult');
+  if(!fileInput.files.length){ out.innerHTML = errorBox('choose a PDF file first'); return; }
+  const form = new FormData();
+  form.append('file', fileInput.files[0]);
+  setLoading('pdfBtn', true);
+  out.innerHTML = '';
+  try{
+    const res = await fetch(apiBase()+'/api/verify/pdf', {method:'POST', body: form});
+    const data = await res.json();
+    if(!res.ok){ out.innerHTML = errorBox(data.detail || res.status); return; }
+    let sub = data.company ? `${data.company} — ${data.role || ''}` : 'No matching offer record found for this file.';
+    let html = renderVerdict(data, sub);
+    html += renderReasons(data.reasons, data.verdict);
+    if(data.offer_id){
+      html += `<div class="signals-panel"><p class="sec-label">OFFER RECORD</p>
+        ${signalRow('offer id', data.offer_id)}${signalRow('company', data.company||'—')}${signalRow('role', data.role||'—')}</div>`;
+    }
+    out.innerHTML = html;
+  }catch(e){ out.innerHTML = errorBox(e.message); }
+  finally{ setLoading('pdfBtn', false); }
+}
+
+async function runTextCheck(){
+  const text = document.getElementById('textInput').value;
+  const out = document.getElementById('textResult');
+  if(!text.trim()){ out.innerHTML = errorBox('paste some text first'); return; }
+  setLoading('textBtn', true);
+  out.innerHTML = '';
+  try{
+    const res = await fetch(apiBase()+'/api/verify/text', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})});
+    const data = await res.json();
+    if(!res.ok){ out.innerHTML = errorBox(data.detail || res.status); return; }
+    const flagCount = (data.flags||[]).length;
+    let html = renderVerdict(data, flagCount ? `${flagCount} scam pattern${flagCount>1?'s':''} detected` : 'No known scam patterns detected');
+    html += renderReasons(data.reasons, data.verdict);
+    if(flagCount){
+      html += `<div class="signals-panel"><p class="sec-label">FLAGS FIRED</p>${data.flags.map(f=>`<span class="flag-pill ${f.severity}">${f.label}</span>`).join('')}</div>`;
+    }
+    out.innerHTML = html;
+  }catch(e){ out.innerHTML = errorBox(e.message); }
+  finally{ setLoading('textBtn', false); }
+}
+
+async function runAnyTextCheck(){
+  const text = document.getElementById('anyTextInput').value;
+  const out = document.getElementById('anyTextResult');
+  if(!text.trim()){ out.innerHTML = errorBox('paste some text first'); return; }
+  setLoading('anyTextBtn', true);
+  out.innerHTML = '';
+  try{
+    const res = await fetch(apiBase()+'/api/verify/text', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})});
+    const data = await res.json();
+    if(!res.ok){ out.innerHTML = errorBox(data.detail || res.status); return; }
+    const flagCount = (data.flags||[]).length;
+    let html = renderVerdict(data, flagCount ? `${flagCount} scam pattern${flagCount>1?'s':''} detected` : 'No known scam patterns detected');
+    html += renderReasons(data.reasons, data.verdict);
+    if(flagCount){
+      html += `<div class="signals-panel"><p class="sec-label">FLAGS FIRED</p>${data.flags.map(f=>`<span class="flag-pill ${f.severity}">${f.label}</span>`).join('')}</div>`;
+    }
+    out.innerHTML = html;
+  }catch(e){ out.innerHTML = errorBox(e.message); }
+  finally{ setLoading('anyTextBtn', false); }
+}
+
+async function runOfferIdCheck(){
+  const id = document.getElementById('offerIdInput').value.trim();
+  const out = document.getElementById('offerIdResult');
+  if(!id){ out.innerHTML = errorBox('enter an offer ID first'); return; }
+  setLoading('offerIdBtn', true);
+  out.innerHTML = '';
+  try{
+    const res = await fetch(apiBase()+`/api/offers/${encodeURIComponent(id)}/verify`);
+    const data = await res.json();
+    if(!res.ok){ out.innerHTML = errorBox(data.detail || res.status); return; }
+    let sub = data.company ? `${data.company} — ${data.role || ''}` : 'No record found for this offer ID.';
+    let html = renderVerdict(data, sub);
+    html += renderReasons(data.reasons, data.verdict);
+    if(data.note) html += `<div class="hint">${data.note}</div>`;
+    out.innerHTML = html;
+  }catch(e){ out.innerHTML = errorBox(e.message); }
+  finally{ setLoading('offerIdBtn', false); }
+}
+
+/* ---------------- COMPANY TAB ---------------- */
+
+function updateBadge(){
+  const el = document.getElementById('companyBadge');
+  el.innerHTML = companyId ? `<div class="company-badge">active company id: ${companyId}</div>`
+                            : `<div class="company-badge none">no company selected</div>`;
+}
+
+async function createCompany(){
+  try{
+    const res = await fetch(apiBase()+'/api/company', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name: document.getElementById('companyName').value, domain: document.getElementById('companyDomain').value})
+    });
+    const data = await res.json();
+    if(!res.ok){ showOut('outCreateCompany', data.detail || data, true); return; }
+    companyId = data.id;
+    updateBadge();
+    showOut('outCreateCompany', data, false);
+  }catch(e){ showOut('outCreateCompany', e.message, true); }
+}
+
+async function devForceVerify(){
+  if(!companyId){ showOut('outVerify', 'create or select a company first', true); return; }
+  try{
+    const res = await fetch(apiBase()+`/api/company/${companyId}/dev-force-verify`, {method:'POST'});
+    showOut('outVerify', await res.json(), !res.ok);
+  }catch(e){ showOut('outVerify', e.message, true); }
+}
+
+async function realVerify(){
+  if(!companyId){ showOut('outVerify', 'create or select a company first', true); return; }
+  try{
+    const res = await fetch(apiBase()+`/api/company/${companyId}/verify-domain`, {method:'POST'});
+    showOut('outVerify', await res.json(), !res.ok);
+  }catch(e){ showOut('outVerify', e.message, true); }
+}
+
+async function addRecruiter(){
+  if(!companyId){ showOut('outAddRecruiter', 'create or select a company first', true); return; }
+  try{
+    const res = await fetch(apiBase()+`/api/company/${companyId}/recruiters`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name: document.getElementById('recName').value, email: document.getElementById('recEmail').value, linkedin_url: document.getElementById('recLinkedin').value})
+    });
+    showOut('outAddRecruiter', await res.json(), !res.ok);
+  }catch(e){ showOut('outAddRecruiter', e.message, true); }
+}
+
+async function issueOffer(){
+  if(!companyId){ showOut('outIssueOffer', 'create or select a company first', true); return; }
+  const fileInput = document.getElementById('offerPdf');
+  if(!fileInput.files.length){ showOut('outIssueOffer', 'choose a PDF first', true); return; }
+  const form = new FormData();
+  form.append('company_id', companyId);
+  form.append('candidate_email', document.getElementById('offerCandidate').value);
+  form.append('role', document.getElementById('offerRole').value);
+  form.append('file', fileInput.files[0]);
+  try{
+    const res = await fetch(apiBase()+'/api/offers', {method:'POST', body: form});
+    if(!res.ok){ const data = await res.json(); showOut('outIssueOffer', data.detail || data, true); return; }
+    const offerId = res.headers.get('X-Vouch-Offer-Id');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const el = document.getElementById('outIssueOffer');
+    el.className = 'out show ok';
+    el.innerHTML = `Offer issued: ${offerId}\n\n<a href="${url}" download="${offerId}.pdf" class="mono">Download stamped PDF →</a>\n\nUpload this exact file in the User tab's Offer PDF check, or enter "${offerId}" in the Offer ID check.`;
+  }catch(e){ showOut('outIssueOffer', e.message, true); }
+}
+
+async function runScan(){
+  if(!companyId){ showOut('outScan', 'create or select a company first', true); return; }
+  setLoading('btnScan', true, 'Run lookalike scan');
+  try{
+    const res = await fetch(apiBase()+`/api/company/${companyId}/monitor/scan`, {method:'POST'});
+    showOut('outScan', await res.json(), !res.ok);
+  }catch(e){ showOut('outScan', e.message, true); }
+  finally{ setLoading('btnScan', false, 'Run lookalike scan'); }
+}
+
+async function loadCompanyList(){
+  const out = document.getElementById('companyListOut');
+  out.innerHTML = '<p class="hint">loading…</p>';
+  try{
+    const res = await fetch(apiBase()+'/api/company');
+    if(!res.ok){
+      out.innerHTML = errorBox(`GET /api/company returned ${res.status}. This endpoint may not exist in your backend yet, ask your team to add it to main.py.`);
+      return;
+    }
+    const companies = await res.json();
+    if(!Array.isArray(companies) || !companies.length){
+      out.innerHTML = '<p class="hint">No companies created yet.</p>';
+      return;
+    }
+    let html = '<table><tr><th>ID</th><th>Name</th><th>Domain</th><th>Verified</th></tr>';
+    companies.forEach(c=>{
+      html += `<tr class="clickable" onclick="selectCompany(${c.id})">
+        <td>${c.id}</td><td>${c.name}</td><td>${c.domain}</td><td>${c.domain_verified ? 'yes':'no'}</td></tr>`;
+    });
+    html += '</table>';
+    out.innerHTML = html;
+  }catch(e){
+    out.innerHTML = errorBox(e.message);
+  }
+}
+
+function selectCompany(id){
+  companyId = id;
+  updateBadge();
+  document.getElementById('activeCompanyReview').style.display = 'block';
+  refreshReview();
+}
+
+async function refreshReview(){
+  const el = document.getElementById('reviewOut');
+  if(!companyId){ el.innerHTML = '<p class="hint">no company selected</p>'; return; }
+  try{
+    const [trustFile, recruiters, offers, lookalikes] = await Promise.all([
+      fetch(apiBase()+`/api/company/${companyId}/trust-file`).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch(apiBase()+`/api/company/${companyId}/recruiters`).then(r=>r.json()).catch(()=>[]),
+      fetch(apiBase()+`/api/company/${companyId}/offers`).then(r=>r.json()).catch(()=>[]),
+      fetch(apiBase()+`/api/company/${companyId}/lookalikes`).then(r=>r.json()).catch(()=>[]),
+    ]);
+    let html = `<p class="hint">trust-file: ${trustFile ? 'published (domain verified)' : 'not available — verify the domain first'}</p>`;
+    html += '<table><tr><th>Recruiters</th><th>Email</th></tr>';
+    recruiters.forEach(r=> html += `<tr><td>${r.name}</td><td>${r.email}</td></tr>`);
+    if(!recruiters.length) html += '<tr><td colspan="2">none added yet</td></tr>';
+    html += '</table>';
+    html += '<table><tr><th>Offers</th><th>Candidate</th><th>Role</th></tr>';
+    offers.forEach(o=> html += `<tr><td>${o.id}</td><td>${o.candidate_email}</td><td>${o.role}</td></tr>`);
+    if(!offers.length) html += '<tr><td colspan="3">none issued yet</td></tr>';
+    html += '</table>';
+    html += '<table><tr><th>Lookalike domain</th><th>Risk</th><th>Has MX</th></tr>';
+    lookalikes.forEach(l=> html += `<tr><td>${l.domain}</td><td>${l.risk}</td><td>${l.has_mx?'yes':'no'}</td></tr>`);
+    if(!lookalikes.length) html += '<tr><td colspan="3">none found / not scanned yet</td></tr>';
+    html += '</table>';
+    el.innerHTML = html;
+  }catch(e){ el.innerHTML = errorBox(e.message); }
+}
+
+updateBadge();
+checkHealth();
+</script>
+
+</body>
+</html>

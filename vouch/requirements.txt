@@ -1,0 +1,11 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+pypdf==5.1.0
+reportlab==4.2.5
+qrcode[pil]==8.0
+rapidfuzz==3.10.1
+dnspython==2.7.0
+requests==2.32.3
+httpx==0.28.1
+cryptography==43.0.3

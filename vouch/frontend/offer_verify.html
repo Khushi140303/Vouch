@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vouch — Offer verification</title>
+<style>
+  :root {
+    --ink: #14181f; --muted: #5b6270; --border: #e5e7eb;
+    --brand: #1f4fd6; --brand-dark: #163aa0; --bg: #ffffff; --bg-soft: #f7f8fa;
+    --green: #0a7d33; --green-bg: #eafaf0; --green-border: #b8ecc9;
+    --red: #b0271e; --red-bg: #fdecea; --red-border: #f3b6b1;
+    --gray: #5b6270; --gray-bg: #f1f2f4; --gray-border: #d9dbe0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-soft); color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+  }
+  .card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
+    padding: 32px 28px; max-width: 420px; width: 100%; text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+  .icon {
+    width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; color: #fff;
+  }
+  .verified .icon { background: var(--green); }
+  .scam .icon { background: var(--red); }
+  .unverifiable .icon { background: var(--gray); }
+  h1 { font-size: 19px; margin: 0 0 6px; }
+  .verified h1 { color: var(--green); }
+  .scam h1 { color: var(--red); }
+  .unverifiable h1 { color: var(--gray); }
+  .meta { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+  ul.reasons { text-align: left; margin: 0 0 20px; padding-left: 20px; font-size: 13.5px; color: var(--ink); }
+  ul.reasons li { margin-bottom: 5px; }
+  .note {
+    background: var(--bg-soft); border-radius: 8px; padding: 12px; font-size: 13px;
+    color: var(--muted); margin-bottom: 18px;
+  }
+  a.cta {
+    display: inline-block; background: var(--brand); color: #fff; text-decoration: none;
+    padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+  }
+  a.cta:hover { background: var(--brand-dark); }
+  .loading { color: var(--muted); font-size: 14px; }
+  .powered { margin-top: 22px; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <div class="loading">Checking this offer&hellip;</div>
+</div>
+
+<script>
+  const VERDICT_ICON = { verified: "&#10003;", scam: "&#33;", unverifiable: "?" };
+  const VERDICT_TITLE = {
+    verified: "This offer is verified",
+    scam: "This document doesn't match what was issued",
+    unverifiable: "We couldn't find a record of this offer",
+  };
+
+  async function run() {
+    const offerId = window.location.pathname.split("/").filter(Boolean).pop();
+    const card = document.getElementById("card");
+    try {
+      const resp = await fetch(`/api/offers/${encodeURIComponent(offerId)}/verify`);
+      const data = await resp.json();
+      const verdict = data.verdict || "unverifiable";
+
+      const metaParts = [];
+      if (data.company) metaParts.push(data.company);
+      if (data.role) metaParts.push(data.role);
+
+      card.className = "card " + verdict;
+      card.innerHTML = `
+        <div class="icon">${VERDICT_ICON[verdict] || "?"}</div>
+        <h1>${VERDICT_TITLE[verdict] || verdict}</h1>
+        <div class="meta">${metaParts.join(" &middot; ") || ("Offer ID: " + offerId)}</div>
+        <ul class="reasons">${(data.reasons || []).map(r => `<li>${escapeHtml(r)}</li>`).join("")}</ul>
+        ${data.note ? `<div class="note">${escapeHtml(data.note)}</div>` : ""}
+        <a class="cta" href="/verify?tab=pdf">Upload the PDF for a full check</a>
+        <div class="powered">Verified by Vouch</div>
+      `;
+    } catch (e) {
+      card.className = "card unverifiable";
+      card.innerHTML = `
+        <div class="icon">?</div>
+        <h1>Couldn't check this offer</h1>
+        <div class="meta">The verification service may be unreachable.</div>
+      `;
+    }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  run();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vouch — Verify an offer, recruiter, or message</title>
+<style>
+  :root {
+    --ink: #14181f; --muted: #5b6270; --border: #e5e7eb;
+    --brand: #1f4fd6; --brand-dark: #163aa0;
+    --bg: #ffffff; --bg-soft: #f7f8fa;
+    --green: #0a7d33; --green-bg: #eafaf0; --green-border: #b8ecc9;
+    --red: #b0271e; --red-bg: #fdecea; --red-border: #f3b6b1;
+    --gray: #5b6270; --gray-bg: #f1f2f4; --gray-border: #d9dbe0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink); background: var(--bg-soft); line-height: 1.5;
+  }
+  header {
+    background: var(--bg); border-bottom: 1px solid var(--border);
+    padding: 20px 48px; display: flex; align-items: center; gap: 10px;
+  }
+  .logo-mark { width: 26px; height: 26px; border-radius: 7px;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark)); }
+  header .name { font-weight: 700; font-size: 17px; }
+
+  main { max-width: 640px; margin: 0 auto; padding: 48px 20px 80px; }
+  .intro { text-align: center; margin-bottom: 32px; }
+  .intro h1 { font-size: 26px; margin: 0 0 8px; letter-spacing: -0.3px; }
+  .intro p { color: var(--muted); margin: 0; font-size: 15px; }
+
+  .card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .tab {
+    flex: 1; padding: 14px 8px; text-align: center; font-size: 13.5px; font-weight: 600;
+    color: var(--muted); cursor: pointer; border: none; background: none;
+    border-bottom: 2px solid transparent;
+  }
+  .tab.active { color: var(--brand); border-bottom-color: var(--brand); }
+  .tab-panel { display: none; padding: 24px; }
+  .tab-panel.active { display: block; }
+
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+  .hint { font-size: 12.5px; color: var(--muted); margin: -2px 0 12px; }
+  textarea, input[type="text"], input[type="email"] {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 14px; font-family: inherit; resize: vertical;
+  }
+  textarea { min-height: 130px; }
+  input[type="file"] { font-size: 13px; }
+
+  .file-drop {
+    border: 1.5px dashed var(--border); border-radius: 10px; padding: 28px 16px;
+    text-align: center; color: var(--muted); font-size: 13.5px; margin-bottom: 16px;
+  }
+
+  .submit-btn {
+    background: var(--brand); color: #fff; border: none; padding: 11px 20px;
+    border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 14px;
+  }
+  .submit-btn:hover { background: var(--brand-dark); }
+  .submit-btn:disabled { background: var(--gray-border); cursor: not-allowed; }
+
+  .result { margin-top: 22px; border-radius: 10px; padding: 18px; display: none; }
+  .result.show { display: block; }
+  .result.verified { background: var(--green-bg); border: 1px solid var(--green-border); }
+  .result.scam { background: var(--red-bg); border: 1px solid var(--red-border); }
+  .result.unverifiable { background: var(--gray-bg); border: 1px solid var(--gray-border); }
+  .result-head { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+  .result.verified .result-head { color: var(--green); }
+  .result.scam .result-head { color: var(--red); }
+  .result.unverifiable .result-head { color: var(--gray); }
+  .result-icon {
+    width: 24px; height: 24px; border-radius: 50%; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 13px; color: #fff; flex-shrink: 0;
+  }
+  .result.verified .result-icon { background: var(--green); }
+  .result.scam .result-icon { background: var(--red); }
+  .result.unverifiable .result-icon { background: var(--gray); }
+  .result ul { margin: 0; padding-left: 20px; font-size: 13.5px; }
+  .result li { margin-bottom: 4px; }
+  .result .meta { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+
+  .loading { color: var(--muted); font-size: 13.5px; margin-top: 14px; display: none; }
+  .loading.show { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark"></div>
+  <span class="name">Vouch</span>
+</header>
+
+<main>
+  <div class="intro">
+    <h1>Check if it's real</h1>
+    <p>Paste an offer letter, an email, a recruiter's address, or a message —
+       we'll tell you what we can confirm.</p>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" data-tab="pdf">Offer Letter</button>
+      <button class="tab" data-tab="email">Email</button>
+      <button class="tab" data-tab="recruiter">Recruiter</button>
+      <button class="tab" data-tab="text">Message</button>
+    </div>
+
+    <div class="tab-panel active" data-panel="pdf">
+      <label>Upload the offer letter PDF</label>
+      <div class="hint">We check its signature and whether it's been edited since it was issued.</div>
+      <div class="file-drop">
+        <input type="file" id="pdf-input" accept="application/pdf">
+      </div>
+      <button class="submit-btn" onclick="checkPdf()">Check Offer</button>
+    </div>
+
+    <div class="tab-panel" data-panel="email">
+      <label>Paste the full email source</label>
+      <div class="hint">Gmail: open the message → ⋮ → "Show original", then paste everything. This lets us check SPF/DKIM/DMARC.</div>
+      <textarea id="email-input" placeholder="From: ...&#10;Subject: ...&#10;Authentication-Results: ...&#10;&#10;(message body)"></textarea>
+      <button class="submit-btn" onclick="checkEmail()">Check Email</button>
+    </div>
+
+    <div class="tab-panel" data-panel="recruiter">
+      <label>Recruiter's email address</label>
+      <div class="hint">We check the domain against every company registered with Vouch.</div>
+      <input type="email" id="recruiter-input" placeholder="someone@company.com">
+      <button class="submit-btn" onclick="checkRecruiter()">Check Recruiter</button>
+    </div>
+
+    <div class="tab-panel" data-panel="text">
+      <label>Paste the message text</label>
+      <div class="hint">We scan for known scam patterns — payment requests, gift cards, urgency, and more.</div>
+      <textarea id="text-input" placeholder="Paste the message here..."></textarea>
+      <button class="submit-btn" onclick="checkText()">Check Message</button>
+    </div>
+
+    <div style="padding: 0 24px;">
+      <div class="loading" id="loading">Checking…</div>
+      <div class="result" id="result">
+        <div class="result-head">
+          <span class="result-icon" id="result-icon"></span>
+          <span id="result-title"></span>
+        </div>
+        <ul id="result-reasons"></ul>
+        <div class="meta" id="result-meta"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const API_BASE = ""; // same-origin: FastAPI serves this page, so relative paths work
+
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      tab.classList.add("active");
+      document.querySelector(`.tab-panel[data-panel="${tab.dataset.tab}"]`).classList.add("active");
+      hideResult();
+    });
+  });
+
+  function setLoading(on) {
+    document.getElementById("loading").classList.toggle("show", on);
+    if (on) hideResult();
+  }
+  function hideResult() {
+    document.getElementById("result").classList.remove("show");
+  }
+
+  const VERDICT_LABEL = {
+    verified: "Verified", scam: "Likely scam", unverifiable: "Can't verify",
+  };
+  const VERDICT_ICON = { verified: "&#10003;", scam: "&#33;", unverifiable: "?" };
+
+  function renderResult(data) {
+    setLoading(false);
+    const el = document.getElementById("result");
+    const verdict = data.verdict || "unverifiable";
+    el.className = "result show " + verdict;
+    document.getElementById("result-icon").innerHTML = VERDICT_ICON[verdict] || "?";
+    document.getElementById("result-title").textContent = VERDICT_LABEL[verdict] || verdict;
+
+    const reasonsEl = document.getElementById("result-reasons");
+    reasonsEl.innerHTML = "";
+    (data.reasons || []).forEach(r => {
+      const li = document.createElement("li");
+      li.textContent = r;
+      reasonsEl.appendChild(li);
+    });
+
+    const metaParts = [];
+    if (data.company) metaParts.push(`Company: ${data.company}`);
+    if (data.role) metaParts.push(`Role: ${data.role}`);
+    if (data.offer_id) metaParts.push(`Offer ID: ${data.offer_id}`);
+    document.getElementById("result-meta").textContent = metaParts.join(" · ");
+  }
+
+  function renderError(msg) {
+    setLoading(false);
+    renderResult({ verdict: "unverifiable", reasons: [msg] });
+  }
+
+  async function checkPdf() {
+    const input = document.getElementById("pdf-input");
+    if (!input.files.length) { renderError("Choose a PDF file first."); return; }
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("file", input.files[0]);
+    try {
+      const resp = await fetch(API_BASE + "/api/verify/pdf", { method: "POST", body: formData });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) { renderError((data && data.detail) || `Server error (${resp.status}).`); return; }
+      renderResult(data);
+    } catch (e) { renderError("Couldn't reach Vouch. Is the server running?"); }
+  }
+
+  async function checkEmail() {
+    const raw = document.getElementById("email-input").value.trim();
+    if (!raw) { renderError("Paste an email first."); return; }
+    setLoading(true);
+    try {
+      const resp = await fetch(API_BASE + "/api/verify/email", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ raw_email: raw }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) { renderError((data && data.detail) || `Server error (${resp.status}).`); return; }
+      renderResult(data);
+    } catch (e) { renderError("Couldn't reach Vouch. Is the server running?"); }
+  }
+
+  async function checkRecruiter() {
+    const addr = document.getElementById("recruiter-input").value.trim();
+    if (!addr) { renderError("Enter an email address first."); return; }
+    setLoading(true);
+    try {
+      const resp = await fetch(API_BASE + "/api/verify/email", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sender_address: addr }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) { renderError((data && data.detail) || `Server error (${resp.status}).`); return; }
+      renderResult(data);
+    } catch (e) { renderError("Couldn't reach Vouch. Is the server running?"); }
+  }
+
+  async function checkText() {
+    const text = document.getElementById("text-input").value.trim();
+    if (!text) { renderError("Paste a message first."); return; }
+    setLoading(true);
+    try {
+      const resp = await fetch(API_BASE + "/api/verify/text", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text }),
+      });
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok) { renderError((data && data.detail) || `Server error (${resp.status}).`); return; }
+      renderResult(data);
+    } catch (e) { renderError("Couldn't reach Vouch. Is the server running?"); }
+  }
+
+  // support ?tab=pdf|email|recruiter|text deep links (e.g. from the QR-scan page)
+  const params = new URLSearchParams(window.location.search);
+  const wantedTab = params.get("tab");
+  if (wantedTab) {
+    const tabBtn = document.querySelector(`.tab[data-tab="${wantedTab}"]`);
+    if (tabBtn) tabBtn.click();
+  }
+</script>
+
+</body>
+</html>

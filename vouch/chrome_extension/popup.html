@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { width: 260px; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; padding: 16px; color: #16211F; }
+  h1 { font-size: 16px; margin: 0 0 8px; }
+  p { font-size: 12px; color: #4A5568; line-height: 1.4; margin: 0 0 4px; }
+  label { font-size: 12px; font-weight: 600; display: block; margin-top: 12px; }
+  input { width: 100%; box-sizing: border-box; padding: 6px 8px; font-size: 12px; margin-top: 4px; border: 1px solid #DCE3DE; border-radius: 6px; }
+  button { margin-top: 12px; width: 100%; padding: 8px; font-size: 13px; background: #1F7A5C; color: white; border: none; border-radius: 6px; cursor: pointer; }
+  .status { font-size: 11px; color: #1F7A5C; margin-top: 8px; min-height: 14px; }
+</style>
+</head>
+<body>
+  <h1>Vouch for Gmail</h1>
+  <p>Checks the open email against your Vouch server the moment you open it.</p>
+  <p>Reads the rendered inbox, not the Gmail API — so it checks the sender and message text, but can't see SPF/DKIM/DMARC (that needs "Show original").</p>
+  <label>Vouch server URL</label>
+  <input id="apiBase" placeholder="http://localhost:8000" />
+  <button id="save">Save</button>
+  <div class="status" id="status"></div>
+</body>
+<script src="popup.js"></script>
+</html>

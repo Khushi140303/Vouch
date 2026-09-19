@@ -1,0 +1,37 @@
+# Paste this at api.slack.com/apps -> "Create New App" -> "From an app manifest"
+# It sets up the slash command, the message shortcut, scopes, and Socket Mode
+# in one shot -- no manual clicking through tabs.
+display_information:
+  name: Vouch
+  description: Verify offers, recruiters, and emails against the Vouch trust registry, right from Slack.
+  background_color: "#2eb67d"
+features:
+  bot_user:
+    display_name: Vouch
+    always_online: true
+  slash_commands:
+    - command: /vouch
+      description: Verify a pasted email, recruiter address, or message text
+      usage_hint: "paste an offer email, recruiter address, or suspicious text"
+      should_escape: false
+  shortcuts:
+    - name: Verify with Vouch
+      type: message
+      callback_id: verify_with_vouch
+      description: Check this message (and any attached PDF offer) against Vouch
+oauth_config:
+  scopes:
+    bot:
+      - commands
+      - chat:write
+      - files:read
+      - app_mentions:read
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_mention
+  interactivity:
+    is_enabled: true
+  socket_mode_enabled: true
+  org_deploy_enabled: false
+  token_rotation_enabled: false

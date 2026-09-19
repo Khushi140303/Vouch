@@ -1,0 +1,92 @@
+.vouch-card {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  border: 1px solid #DCE3DE;
+}
+
+.vouch-loading {
+  background: #F1F4F2;
+  color: #4A5568;
+}
+
+.vouch-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1F7A5C;
+  margin-right: 6px;
+}
+
+.vouch-verified {
+  background: #E8F5EE;
+  border-color: #BFE3D0;
+  color: #14432F;
+}
+
+.vouch-scam {
+  background: #FBEAE7;
+  border-color: #EFC1B8;
+  color: #5C2018;
+}
+
+.vouch-unverifiable {
+  background: #F1F4F2;
+  border-color: #DCE3DE;
+  color: #4A5568;
+}
+
+.vouch-error {
+  background: #FBEAE7;
+  border-color: #EFC1B8;
+  color: #5C2018;
+}
+
+.vouch-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.vouch-brand {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vouch-reasons {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.vouch-reasons li {
+  margin: 2px 0;
+}
+
+.vouch-subsection {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.vouch-subhead {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.65;
+  margin-bottom: 4px;
+}
+
+.vouch-subtext {
+  margin: 0;
+  font-size: 12px;
+}
